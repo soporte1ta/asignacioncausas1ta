@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Asignación – Visualizador de cargas (3 funcionarios)</title>
+<title>Asignación – Visualizador de cargas (persistente)</title>
 <style>
   :root { --bg:#f7f7fb; --card:#fff; --muted:#667085; --border:#e9e9f2; --ink:#0f172a; --brand:#0ea5e9; }
   * { box-sizing: border-box; }
@@ -35,7 +35,7 @@
 <div class="container">
   <h1>Asignación – Visualizador de cargas</h1>
   <p class="sub">
-    Capacidad por funcionario editable (por defecto <b>20</b>). Política: <b>menor carga</b> \(L=i·A+j·B+k·C\), <b>no repetir consecutivo</b>; empate → preferencia por <i>aptitud requerida</i> (A/B/C, sin penalizar), luego azar.
+    Capacidad por funcionario editable (por defecto <b>20</b>). Política: <b>menor carga</b> \(L=i·A+j·B+k·C\), <b>no repetir consecutivo</b>; empate → preferencia por <i>aptitud requerida</i> (A/B/C), luego azar.
   </p>
 
   <!-- CONTROLES -->
@@ -90,40 +90,28 @@
         <label>A (Alta) <input id="f1A" type="number" step="1" value="3"></label>
         <label>B (Media) <input id="f1B" type="number" step="1" value="5"></label>
         <label>C (Baja) <input id="f1C" type="number" step="1" value="4"></label>
-        <div style="display:none">
-          <label>Idoneidad D
-            <select id="f1D"><option value="1" selected>1</option><option value="0.5">0.5</option><option value="0.25">0.25</option></select>
-          </label>
-        </div>
       </div>
       <div>
         <h4>Cecilia Aqueveque González</h4>
         <label>A (Alta) <input id="f2A" type="number" step="1" value="2"></label>
         <label>B (Media) <input id="f2B" type="number" step="1" value="6"></label>
         <label>C (Baja) <input id="f2C" type="number" step="1" value="4"></label>
-        <div style="display:none">
-          <label>Idoneidad D
-            <select id="f2D"><option value="1" selected>1</option><option value="0.5">0.5</option><option value="0.25">0.25</option></select>
-          </label>
-        </div>
       </div>
       <div>
         <h4>Adolfo Ilufi Roca</h4>
         <label>A (Alta) <input id="f3A" type="number" step="1" value="2"></label>
         <label>B (Media) <input id="f3B" type="number" step="1" value="6"></label>
         <label>C (Baja) <input id="f3C" type="number" step="1" value="1"></label>
-        <div style="display:none">
-          <label>Idoneidad D
-            <select id="f3D"><option value="1" selected>1</option><option value="0.5">0.5</option><option value="0.25">0.25</option></select>
-          </label>
-        </div>
       </div>
     </div>
     <div class="footer">
       <button class="btn" onclick="guardarComoInicial()">Guardar como “Inicial”</button>
       <button class="btn" onclick="restablecer()">Restablecer</button>
+      <button class="btn" onclick="guardarEstadoLocal()">Guardar estado local</button>
+      <button class="btn" onclick="borrarEstadoLocal()">Borrar estado local</button>
+      <span class="pill" id="persistInfo">—</span>
     </div>
-    <p class="sub">“Guardar como Inicial” actualiza la línea base para el gráfico <i>Inicial vs Actual</i>.</p>
+    <p class="sub">El estado se guarda automáticamente en este navegador con <code>localStorage</code>.</p>
   </div>
 
   <!-- SECTION 1: Visualizador de cargas -->
@@ -176,6 +164,8 @@
 </div>
 
 <script>
+const STORAGE_KEY = 'asignador_v1';
+
 const NAMES = [
   "Ricardo Ortiz Arellano",
   "Cecilia Aqueveque González",
@@ -189,22 +179,34 @@ function getInputs(){
   const j = parseFloat(gid('w_j').value||'0');
   const k = parseFloat(gid('w_k').value||'0');
   const n = NAMES.length;
-  const A=[],B=[],C=[],D=[],caps=[];
+  const A=[],B=[],C=[],caps=[];
   for(let p=1; p<=n; p++){
     A.push(parseInt((gid(`f${p}A`)?.value)||'0'));
     B.push(parseInt((gid(`f${p}B`)?.value)||'0'));
     C.push(parseInt((gid(`f${p}C`)?.value)||'0'));
-    D.push(parseFloat((gid(`f${p}D`)?.value)||'1'));
     caps.push(parseInt((gid(`cap${p}`)?.value)||'20'));
   }
-  return {i,j,k,A,B,C,D,caps};
+  return {i,j,k,A,B,C,caps};
+}
+
+function setInputs(state){
+  gid('w_i').value = state.i;
+  gid('w_j').value = state.j;
+  gid('w_k').value = state.k;
+  for(let p=1; p<=NAMES.length; p++){
+    gid(`f${p}A`).value = state.A[p-1];
+    gid(`f${p}B`).value = state.B[p-1];
+    gid(`f${p}C`).value = state.C[p-1];
+    gid(`cap${p}`).value = state.caps[p-1];
+  }
+  if (state.causeType) gid('causeType').value = state.causeType;
+  if (state.aptReq) gid('aptReq').value = state.aptReq;
 }
 
 function weightedLoad(i,j,k,a,b,c){ return i*a + j*b + k*c; }
-function aptTarget(apt){ return apt==='A' ? 1 : (apt==='B' ? 0.5 : 0.25); }
 
 function pickGreedyOne(params, apt){
-  const {i,j,k,A,B,C,D,caps} = params;
+  const {i,j,k,A,B,C,caps} = params;
   const n = NAMES.length;
   const loads = new Array(n).fill(0).map((_,idx)=> weightedLoad(i,j,k, A[idx], B[idx], C[idx]));
   let eligible = [];
@@ -217,16 +219,7 @@ function pickGreedyOne(params, apt){
   }
   let minL = Math.min(...eligible.map(idx=>loads[idx]));
   let minSet = eligible.filter(idx => Math.abs(loads[idx]-minL) <= 1e-9);
-  if (minSet.length > 1){
-    const tgt = aptTarget(apt);
-    let best=[], bestDist=Infinity;
-    for(const idx of minSet){
-      const dist = Math.abs((D[idx]||1) - tgt);
-      if (dist < bestDist){ bestDist = dist; best=[idx]; }
-      else if (Math.abs(dist-bestDist) <= 1e-9){ best.push(idx); }
-    }
-    minSet = best;
-  }
+  // desempate por aptitud (si deseas, puedes añadir un arreglo D más adelante)
   let chosen = minSet[0];
   if (minSet.length > 1) chosen = minSet[Math.floor(Math.random()*minSet.length)];
   return {idx: chosen};
@@ -353,6 +346,16 @@ function drawTotalsChart(svgId, names, baseTotals, curTotals){
   const h = svg.clientHeight || 320;
   const pad = {l:50,r:20,t:20,b:40};
   const innerW = Math.max(10, w-pad.l-pad.r);
+  const innerH = Math.max(10, h-pad.t-pad-b);
+}
+
+function drawTotalsChart(svgId, names, baseTotals, curTotals){
+  const svg = document.getElementById(svgId);
+  while(svg.firstChild) svg.removeChild(svg.firstChild);
+  const w = svg.clientWidth || svg.parentElement.clientWidth;
+  const h = svg.clientHeight || 320;
+  const pad = {l:50,r:20,t:20,b:40};
+  const innerW = Math.max(10, w-pad.l-pad.r);
   const innerH = Math.max(10, h-pad.t-pad.b);
   const maxV = Math.max(1, ...baseTotals, ...curTotals);
   const step = innerW / names.length;
@@ -390,12 +393,29 @@ function drawTotalsChart(svgId, names, baseTotals, curTotals){
     lbl.textContent = nm;
     svg.appendChild(lbl);
 
-    const val = document.createElementNS('http://www.w3.org/2000/svg','text');
-    val.setAttribute('x', x1 + bw/2); val.setAttribute('y', y1p - 6);
-    val.setAttribute('text-anchor','middle'); val.setAttribute('font-size','12');
-    val.textContent = curTotals[i].toString();
-    svg.appendChild(val);
+    const valBase = document.createElementNS('http://www.w3.org/2000/svg','text');
+    valBase.setAttribute('x', x0 + bw/2); valBase.setAttribute('y', y0 - 6);
+    valBase.setAttribute('text-anchor','middle'); valBase.setAttribute('font-size','12');
+    valBase.textContent = baseTotals[i].toString();
+    svg.appendChild(valBase);
+
+    const valCur = document.createElementNS('http://www.w3.org/2000/svg','text');
+    valCur.setAttribute('x', x1 + bw/2); valCur.setAttribute('y', y1p - 6);
+    valCur.setAttribute('text-anchor','middle'); valCur.setAttribute('font-size','12');
+    valCur.textContent = curTotals[i].toString();
+    svg.appendChild(valCur);
   });
+
+  if (window.__baselineSavedAt){
+    const note = document.createElementNS('http://www.w3.org/2000/svg','text');
+    note.setAttribute('x', w - pad.r);
+    note.setAttribute('y', pad.t);
+    note.setAttribute('text-anchor','end');
+    note.setAttribute('font-size','11');
+    note.setAttribute('fill','#555');
+    note.textContent = 'Base guardada: ' + window.__baselineSavedAt;
+    svg.appendChild(note);
+  }
 }
 
 function drawAptChart(svgId, counts){
@@ -470,6 +490,54 @@ function renderLog(){
   </table>`;
 }
 
+function saveState(){
+  try{
+    const {i,j,k,A,B,C,caps} = getInputs();
+    const state = {
+      i,j,k,A,B,C,caps,
+      baseline: window.__baselineTotals || null,
+      baselineSavedAt: window.__baselineSavedAt || null,
+      history: window.__history || [],
+      log: window.__log || [],
+      lastAssigned: (typeof window.__lastAssigned==='number' ? window.__lastAssigned : -1),
+      causeType: gid('causeType').value,
+      aptReq: gid('aptReq').value
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    gid('persistInfo').textContent = 'Guardado local: ' + nowSCL();
+  }catch(e){
+    gid('persistInfo').textContent = 'No se pudo guardar estado local';
+  }
+}
+
+function loadState(){
+  try{
+    const s = localStorage.getItem(STORAGE_KEY);
+    if(!s) return false;
+    const state = JSON.parse(s);
+    setInputs(state);
+    window.__baselineTotals = state.baseline || null;
+    window.__baselineSavedAt = state.baselineSavedAt || null;
+    window.__history = state.history || [];
+    window.__log = state.log || [];
+    window.__lastAssigned = (typeof state.lastAssigned==='number' ? state.lastAssigned : -1);
+    gid('persistInfo').textContent = 'Estado local cargado';
+    return true;
+  }catch(e){
+    gid('persistInfo').textContent = 'No se pudo cargar estado local';
+    return false;
+  }
+}
+
+function borrarEstadoLocal(){
+  localStorage.removeItem(STORAGE_KEY);
+  gid('persistInfo').textContent = 'Estado local borrado';
+}
+
+function guardarEstadoLocal(){
+  saveState();
+}
+
 function render(){
   const {i,j,k,A,B,C} = getInputs();
   const loads = A.map((_,idx)=> weightedLoad(i,j,k, A[idx], B[idx], C[idx]));
@@ -509,11 +577,16 @@ function render(){
   gid('lastTag2').textContent = gid('lastTag').textContent;
 
   renderLog();
+
+  // autosave cada render
+  saveState();
 }
 
 function guardarComoInicial(){
   const {A,B,C} = getInputs();
   window.__baselineTotals = NAMES.map((_,i)=> A[i]+B[i]+C[i]);
+  window.__baselineSavedAt = nowSCL();
+  // decisión: no limpiar history/log para poder ver el rastro; se puede limpiar si lo prefieres
   render();
 }
 
@@ -523,11 +596,11 @@ function restablecer(){
   gid('f1A').value = 3; gid('f1B').value = 5; gid('f1C').value = 4;
   gid('f2A').value = 2; gid('f2B').value = 6; gid('f2C').value = 4;
   gid('f3A').value = 2; gid('f3B').value = 6; gid('f3C').value = 1;
-  const hiddenD = ['f1D','f2D','f3D']; hiddenD.forEach(id=>{ const el = gid(id); if (el) el.value = '1'; });
   gid('causeType').value = 'A'; gid('aptReq').value = 'B';
   window.__history = []; window.__log = [];
   const A0 = [3,2,2], B0=[5,6,6], C0=[4,4,1];
   window.__baselineTotals = NAMES.map((_,i)=> A0[i]+B0[i]+C0[i]);
+  window.__baselineSavedAt = null;
   render();
 }
 
@@ -563,23 +636,14 @@ function descargarLogCSV(){
   URL.revokeObjectURL(url);
 }
 
-// Exponer handlers
-window.asignarUna = asignarUna;
-window.deshacer = deshacer;
-window.descargarCSV = descargarCSV;
-window.descargarLogCSV = descargarLogCSV;
-window.restablecer = restablecer;
-window.guardarComoInicial = guardarComoInicial;
-
-// Autotests básicos (no modifican el DOM)
+// Autocarga
 window.addEventListener('load', () => {
-  restablecer();
-  try {
-    console.assert(typeof window.asignarUna === 'function', 'asignarUna debe estar definida');
-    const p = getInputs();
-    console.assert(p.A.length === NAMES.length && p.B.length === NAMES.length && p.C.length === NAMES.length, 'A/B/C deben coincidir con NAMES');
-    console.assert(p.caps.length === NAMES.length, 'caps debe coincidir con NAMES');
-  } catch(e) { console.error(e); }
+  const loaded = loadState();
+  if (!loaded) {
+    restablecer();
+  } else {
+    render();
+  }
 });
 </script>
 </body>
