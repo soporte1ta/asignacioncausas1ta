@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Asignación – Visualizador de cargas (persistente)</title>
+<title>Asignación – Visualizador de cargas (persistente v2 con stand by e historial)</title>
 <style>
   :root { --bg:#f7f7fb; --card:#fff; --muted:#667085; --border:#e9e9f2; --ink:#0f172a; --brand:#0ea5e9; }
   * { box-sizing: border-box; }
@@ -14,7 +14,7 @@
   h3 { margin:0 0 8px 0; }
   .sub { margin:0 0 16px 0; color:var(--muted); font-size:13px; }
   .grid { display:grid; gap:16px; }
-  @media (min-width: 960px) { .grid-2 { grid-template-columns: 1fr 1fr; } .grid-3 { grid-template-columns: repeat(3, 1fr);} }
+  @media (min-width: 960px) { .grid-2 { grid-template-columns: 1fr 1fr; } }
   .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px; }
   label { font-size:12px; color:#333; display:block; margin-bottom:6px; }
   input[type=number], select { width:100%; padding:8px; border:1px solid #ddd; border-radius:8px; }
@@ -29,6 +29,9 @@
   .sw { width:12px; height:12px; display:inline-block; border-radius:3px; border:1px solid #ccc; }
   .scroll-x { overflow-x:auto; }
   .pill { padding:4px 8px; border-radius:999px; background:#eef6ff; border:1px solid #cde4ff; font-size:12px; color:#0b4b8e; }
+  .grid-4 { display:grid; gap:16px; grid-template-columns: repeat(4, 1fr); }
+  @media (max-width: 960px) { .grid-4 { grid-template-columns:1fr; } }
+  .standby-item { display:flex; gap:8px; align-items:center; }
 </style>
 </head>
 <body>
@@ -72,19 +75,40 @@
     </div>
   </div>
 
+  <!-- DISPONIBILIDAD / STAND BY -->
+  <div class="card" style="margin-top:12px">
+    <h3>Disponibilidad de funcionarios (stand by)</h3>
+    <p class="sub">Desmarca a quien quieras dejar en pausa. No se le asignarán causas hasta volver a activarlo.</p>
+    <div class="grid-4">
+      <label class="standby-item">
+        <input type="checkbox" id="active1" checked onchange="render()"> Ricardo Ortiz Arellano
+      </label>
+      <label class="standby-item">
+        <input type="checkbox" id="active2" checked onchange="render()"> Cecilia Aqueveque González
+      </label>
+      <label class="standby-item">
+        <input type="checkbox" id="active3" checked onchange="render()"> Adolfo Ilufi Roca
+      </label>
+      <label class="standby-item">
+        <input type="checkbox" id="active4" checked onchange="render()"> Natalia Fierro Vásquez
+      </label>
+    </div>
+  </div>
+
   <div class="card" style="margin-top:12px">
     <h3>Capacidades máximas</h3>
-    <div class="grid grid-3">
+    <div class="grid-4">
       <label>Ricardo Ortiz Arellano <input id="cap1" type="number" step="1" value="20"></label>
       <label>Cecilia Aqueveque González <input id="cap2" type="number" step="1" value="20"></label>
       <label>Adolfo Ilufi Roca <input id="cap3" type="number" step="1" value="20"></label>
+      <label>Natalia Fierro Vásquez <input id="cap4" type="number" step="1" value="20"></label>
     </div>
     <p class="sub">Si alguien llega a su tope, no recibe más asignaciones.</p>
   </div>
 
   <div class="card" style="margin-top:12px">
     <h3>Estado actual por funcionario (editable)</h3>
-    <div class="grid grid-3">
+    <div class="grid-4">
       <div>
         <h4>Ricardo Ortiz Arellano</h4>
         <label>A (Alta) <input id="f1A" type="number" step="1" value="3"></label>
@@ -103,6 +127,12 @@
         <label>B (Media) <input id="f3B" type="number" step="1" value="6"></label>
         <label>C (Baja) <input id="f3C" type="number" step="1" value="1"></label>
       </div>
+      <div>
+        <h4>Natalia Fierro Vásquez</h4>
+        <label>A (Alta) <input id="f4A" type="number" step="1" value="2"></label>
+        <label>B (Media) <input id="f4B" type="number" step="1" value="3"></label>
+        <label>C (Baja) <input id="f4C" type="number" step="1" value="0"></label>
+      </div>
     </div>
     <div class="footer">
       <button class="btn" onclick="guardarComoInicial()">Guardar como “Inicial”</button>
@@ -114,7 +144,7 @@
     <p class="sub">El estado se guarda automáticamente en este navegador con <code>localStorage</code>.</p>
   </div>
 
-  <!-- SECTION 1: Visualizador de cargas -->
+  <!-- Visualizador -->
   <div id="viz" class="card" style="margin-top:16px">
     <h2>Visualizador de cargas</h2>
     <div id="tableWrap" class="scroll-x"></div>
@@ -129,7 +159,6 @@
     </div>
   </div>
 
-  <!-- SECTION 2: Totales inicial vs actual -->
   <div id="totales" class="card" style="margin-top:16px">
     <h2>Total por funcionario: <span class="sub">Inicial vs Actual</span></h2>
     <div class="svgwrap" style="margin-top:8px"><svg id="chartTotals" width="100%" height="100%"></svg></div>
@@ -139,7 +168,6 @@
     </div>
   </div>
 
-  <!-- SECTION 3: Distribución de aptitud requerida -->
   <div id="apt" class="card" style="margin-top:16px">
     <h2>Distribución de aptitud requerida (sesión)</h2>
     <div class="svgwrap" style="margin-top:8px"><svg id="chartApt" width="100%" height="100%"></svg></div>
@@ -153,7 +181,6 @@
     </div>
   </div>
 
-  <!-- SECTION 4: Historial -->
   <div id="hist" class="card" style="margin-top:16px">
     <h2>Historial de asignaciones (sesión)</h2>
     <div id="logWrap" class="scroll-x"></div>
@@ -164,15 +191,32 @@
 </div>
 
 <script>
-const STORAGE_KEY = 'asignador_v1';
+const STORAGE_KEY = 'asignador_v2';
 
 const NAMES = [
   "Ricardo Ortiz Arellano",
   "Cecilia Aqueveque González",
-  "Adolfo Ilufi Roca"
+  "Adolfo Ilufi Roca",
+  "Natalia Fierro Vásquez"
 ];
 
 function gid(id){ return document.getElementById(id); }
+
+function getActiveFlags() {
+  const flags = [];
+  for (let i = 1; i <= NAMES.length; i++) {
+    const el = gid('active'+i);
+    flags.push(el ? el.checked : true);
+  }
+  return flags;
+}
+
+function setActiveFlags(flags) {
+  for (let i = 1; i <= NAMES.length; i++) {
+    const el = gid('active'+i);
+    if (el) el.checked = (flags && typeof flags[i-1] !== 'undefined') ? !!flags[i-1] : true;
+  }
+}
 
 function getInputs(){
   const i = parseFloat(gid('w_i').value||'0');
@@ -186,7 +230,7 @@ function getInputs(){
     C.push(parseInt((gid(`f${p}C`)?.value)||'0'));
     caps.push(parseInt((gid(`cap${p}`)?.value)||'20'));
   }
-  return {i,j,k,A,B,C,caps};
+  return {i,j,k,A,B,C,caps, actives:getActiveFlags()};
 }
 
 function setInputs(state){
@@ -199,6 +243,7 @@ function setInputs(state){
     gid(`f${p}C`).value = state.C[p-1];
     gid(`cap${p}`).value = state.caps[p-1];
   }
+  setActiveFlags(state.actives || new Array(NAMES.length).fill(true));
   if (state.causeType) gid('causeType').value = state.causeType;
   if (state.aptReq) gid('aptReq').value = state.aptReq;
 }
@@ -206,12 +251,14 @@ function setInputs(state){
 function weightedLoad(i,j,k,a,b,c){ return i*a + j*b + k*c; }
 
 function pickGreedyOne(params, apt){
-  const {i,j,k,A,B,C,caps} = params;
+  const {i,j,k,A,B,C,caps,actives} = params;
   const n = NAMES.length;
   const loads = new Array(n).fill(0).map((_,idx)=> weightedLoad(i,j,k, A[idx], B[idx], C[idx]));
   let eligible = [];
   for(let idx=0; idx<n; idx++){
-    if (A[idx]+B[idx]+C[idx] < caps[idx]) eligible.push(idx);
+    const hasCap = (A[idx]+B[idx]+C[idx] < caps[idx]);
+    const isActive = actives && actives[idx] !== false;
+    if (hasCap && isActive) eligible.push(idx);
   }
   if (!eligible.length) return {idx:-1};
   if (eligible.length > 1 && window.__lastAssigned !== undefined && eligible.includes(window.__lastAssigned)){
@@ -219,7 +266,6 @@ function pickGreedyOne(params, apt){
   }
   let minL = Math.min(...eligible.map(idx=>loads[idx]));
   let minSet = eligible.filter(idx => Math.abs(loads[idx]-minL) <= 1e-9);
-  // desempate por aptitud (si deseas, puedes añadir un arreglo D más adelante)
   let chosen = minSet[0];
   if (minSet.length > 1) chosen = minSet[Math.floor(Math.random()*minSet.length)];
   return {idx: chosen};
@@ -236,7 +282,7 @@ function asignarUna(){
   const p = getInputs();
   const pick = pickGreedyOne(p, apt);
   const idx = pick.idx;
-  if (idx === -1){ alert('No hay capacidad disponible.'); return; }
+  if (idx === -1){ alert('No hay capacidad disponible o todos están en stand by.'); return; }
 
   const L_before = weightedLoad(p.i,p.j,p.k, p.A[idx], p.B[idx], p.C[idx]);
   const A0=p.A[idx], B0=p.B[idx], C0=p.C[idx];
@@ -337,16 +383,6 @@ function drawStackedChart(svgId, names, A, B, C){
     val.textContent = total.toString();
     svg.appendChild(val);
   });
-}
-
-function drawTotalsChart(svgId, names, baseTotals, curTotals){
-  const svg = document.getElementById(svgId);
-  while(svg.firstChild) svg.removeChild(svg.firstChild);
-  const w = svg.clientWidth || svg.parentElement.clientWidth;
-  const h = svg.clientHeight || 320;
-  const pad = {l:50,r:20,t:20,b:40};
-  const innerW = Math.max(10, w-pad.l-pad.r);
-  const innerH = Math.max(10, h-pad.t-pad-b);
 }
 
 function drawTotalsChart(svgId, names, baseTotals, curTotals){
@@ -492,9 +528,10 @@ function renderLog(){
 
 function saveState(){
   try{
-    const {i,j,k,A,B,C,caps} = getInputs();
+    const {i,j,k,A,B,C,caps,actives} = getInputs();
     const state = {
       i,j,k,A,B,C,caps,
+      actives,
       baseline: window.__baselineTotals || null,
       baselineSavedAt: window.__baselineSavedAt || null,
       history: window.__history || [],
@@ -515,6 +552,9 @@ function loadState(){
     const s = localStorage.getItem(STORAGE_KEY);
     if(!s) return false;
     const state = JSON.parse(s);
+    if (!state.actives) {
+      state.actives = new Array(NAMES.length).fill(true);
+    }
     setInputs(state);
     window.__baselineTotals = state.baseline || null;
     window.__baselineSavedAt = state.baselineSavedAt || null;
@@ -534,12 +574,72 @@ function borrarEstadoLocal(){
   gid('persistInfo').textContent = 'Estado local borrado';
 }
 
+// sembrar las 3 asignaciones históricas que pidió el usuario
+function seedHistorialFijo() {
+  const seeds = [
+    {ts:"21-10-2025 08:47:20", nameStarts:"Adolfo Ilufi", causa:"B", apt:"B"},
+    {ts:"21-10-2025 11:12:00", nameStarts:"Cecilia Aqueveque", causa:"A", apt:"A"},
+    {ts:"04-11-2025 10:41:13", nameStarts:"Adolfo Ilufi", causa:"C", apt:"C"},
+  ];
+  window.__log = window.__log || [];
+  window.__history = window.__history || [];
+  seeds.forEach(seed => {
+    const exists = window.__log.some(e => e.ts === seed.ts && e.funcionario.startsWith(seed.nameStarts));
+    const idx = NAMES.findIndex(n => n.startsWith(seed.nameStarts));
+    if (!exists && idx !== -1) {
+      // estado antes
+      const before = getInputs();
+      const i = before.i, j = before.j, k = before.k;
+      const A0 = before.A[idx];
+      const B0 = before.B[idx];
+      const C0 = before.C[idx];
+      const cap0 = before.caps[idx];
+      const L_before = weightedLoad(i,j,k, A0,B0,C0);
+
+      // incrementamos el campo correcto en pantalla
+      const field = seed.causa === "A" ? `f${idx+1}A` : seed.causa === "B" ? `f${idx+1}B` : `f${idx+1}C`;
+      gid(field).value = (parseInt(gid(field).value||'0') + 1);
+
+      // estado después
+      const after = getInputs();
+      const A1 = after.A[idx];
+      const B1 = after.B[idx];
+      const C1 = after.C[idx];
+      const cap1 = after.caps[idx];
+      const L_after = weightedLoad(after.i, after.j, after.k, A1,B1,C1);
+
+      window.__log.push({
+        ts: seed.ts,
+        funcionario: NAMES[idx],
+        idx,
+        causa: seed.causa,
+        aptitud: seed.apt,
+        L_antes: +L_before.toFixed(2),
+        L_despues: +L_after.toFixed(2),
+        A_antes: A0,
+        B_antes: B0,
+        C_antes: C0,
+        A_despues: A1,
+        B_despues: B1,
+        C_despues: C1,
+        capacidad: `${A0+B0+C0}/${cap0} → ${A1+B1+C1}/${cap1}`
+      });
+
+      window.__history.push({
+        idx,
+        type: seed.causa,
+        apt: seed.apt
+      });
+    }
+  });
+}
+
 function guardarEstadoLocal(){
   saveState();
 }
 
 function render(){
-  const {i,j,k,A,B,C} = getInputs();
+  const {i,j,k,A,B,C,actives} = getInputs();
   const loads = A.map((_,idx)=> weightedLoad(i,j,k, A[idx], B[idx], C[idx]));
 
   const tableWrap = document.getElementById('tableWrap');
@@ -548,23 +648,24 @@ function render(){
     const L = loads[idx].toFixed(2);
     const assigned = (window.__history||[]).filter(h => h.idx===idx).length;
     const total = A[idx]+B[idx]+C[idx];
-    return `<tr>${cell(nm)}${cell(total)}${cell(A[idx])}${cell(B[idx])}${cell(C[idx])}${cell(L)}${cell(assigned)}</tr>`;
+    const activeTxt = actives[idx] ? 'Activo' : 'Stand by';
+    return `<tr>${cell(nm)}${cell(total)}${cell(A[idx])}${cell(B[idx])}${cell(C[idx])}${cell(L)}${cell(assigned)}${cell(activeTxt)}</tr>`;
   }).join('');
   const totalAsign = (window.__history||[]).length;
   const sumA = A.reduce((a,b)=>a+b,0), sumB=B.reduce((a,b)=>a+b,0), sumC=C.reduce((a,b)=>a+b,0);
   tableWrap.innerHTML = `<table>
     <thead>
-      <tr><th>Funcionario</th><th>Total</th><th>A</th><th>B</th><th>C</th><th>Carga L</th><th>Nuevas asignadas</th></tr>
+      <tr><th>Funcionario</th><th>Total</th><th>A</th><th>B</th><th>C</th><th>Carga L</th><th>Nuevas asignadas</th><th>Estado</th></tr>
     </thead>
     <tbody>
       ${rows}
-      <tr><td><b>Totales</b></td><td><b>${sumA+sumB+sumC}</b></td><td><b>${sumA}</b></td><td><b>${sumB}</b></td><td><b>${sumC}</b></td><td>—</td><td><b>${totalAsign}</b></td></tr>
+      <tr><td><b>Totales</b></td><td><b>${sumA+sumB+sumC}</b></td><td><b>${sumA}</b></td><td><b>${sumB}</b></td><td><b>${sumC}</b></td><td>—</td><td><b>${totalAsign}</b></td><td>—</td></tr>
     </tbody>
   </table>`;
 
   drawStackedChart('chartStack', NAMES, A, B, C);
 
-  const baseTotals = window.__baselineTotals || [0,0,0];
+  const baseTotals = window.__baselineTotals || [0,0,0,0];
   const curTotals  = NAMES.map((_,i)=> A[i]+B[i]+C[i]);
   drawTotalsChart('chartTotals', NAMES, baseTotals, curTotals);
 
@@ -578,7 +679,6 @@ function render(){
 
   renderLog();
 
-  // autosave cada render
   saveState();
 }
 
@@ -586,32 +686,41 @@ function guardarComoInicial(){
   const {A,B,C} = getInputs();
   window.__baselineTotals = NAMES.map((_,i)=> A[i]+B[i]+C[i]);
   window.__baselineSavedAt = nowSCL();
-  // decisión: no limpiar history/log para poder ver el rastro; se puede limpiar si lo prefieres
   render();
 }
 
 function restablecer(){
   gid('w_i').value = 1.0; gid('w_j').value = 0.5; gid('w_k').value = 0.25;
-  gid('cap1').value = 20; gid('cap2').value = 20; gid('cap3').value = 20;
+  gid('cap1').value = 20; gid('cap2').value = 20; gid('cap3').value = 20; gid('cap4').value = 20;
   gid('f1A').value = 3; gid('f1B').value = 5; gid('f1C').value = 4;
   gid('f2A').value = 2; gid('f2B').value = 6; gid('f2C').value = 4;
   gid('f3A').value = 2; gid('f3B').value = 6; gid('f3C').value = 1;
+  gid('f4A').value = 2; gid('f4B').value = 3; gid('f4C').value = 0;
   gid('causeType').value = 'A'; gid('aptReq').value = 'B';
+  gid('active1').checked = true;
+  gid('active2').checked = true;
+  gid('active3').checked = true;
+  gid('active4').checked = true;
   window.__history = []; window.__log = [];
-  const A0 = [3,2,2], B0=[5,6,6], C0=[4,4,1];
+  const A0 = [3,2,2,2], B0=[5,6,6,3], C0=[4,4,1,0];
   window.__baselineTotals = NAMES.map((_,i)=> A0[i]+B0[i]+C0[i]);
   window.__baselineSavedAt = null;
+  // metemos las 3 del historial
+  seedHistorialFijo();
   render();
 }
 
 function descargarCSV(){
-  const {i,j,k,A,B,C} = getInputs();
+  const {i,j,k,A,B,C,actives} = getInputs();
   const loads = A.map((_,idx)=> weightedLoad(i,j,k, A[idx], B[idx], C[idx]));
-  const headers = ["Funcionario","Total","A","B","C","L","Asignadas_sesion","Inicial_total"];
+  const headers = ["Funcionario","Total","A","B","C","L","Asignadas_sesion","Inicial_total","Estado"];
   const counts = new Array(NAMES.length).fill(0);
   (window.__history||[]).forEach(h => counts[h.idx]++);
   const rows = NAMES.map((nm,idx)=>[
-    nm, A[idx]+B[idx]+C[idx], A[idx], B[idx], C[idx], loads[idx].toFixed(2), counts[idx], (window.__baselineTotals?window.__baselineTotals[idx]:0)
+    nm, A[idx]+B[idx]+C[idx], A[idx], B[idx], C[idx],
+    loads[idx].toFixed(2), counts[idx],
+    (window.__baselineTotals?window.__baselineTotals[idx]:0),
+    actives[idx] ? 'Activo' : 'Stand by'
   ].join(","));
   const csv = [headers.join(","), ...rows].join("\n");
   const blob = new Blob([csv], {type: "text/csv;charset=utf-8;"});
@@ -636,12 +745,13 @@ function descargarLogCSV(){
   URL.revokeObjectURL(url);
 }
 
-// Autocarga
 window.addEventListener('load', () => {
   const loaded = loadState();
   if (!loaded) {
     restablecer();
   } else {
+    // solo agregamos los 3 si no estaban
+    seedHistorialFijo();
     render();
   }
 });
